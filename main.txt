@@ -11,7 +11,7 @@ MODEL_COLORS = {
     "MoLFormer":   "#332288",
     "MolCLR gin":  "#AA4499",
     "MolCLR gcn":  "#44AA99",
-    "Morgan":      "#117733",
+    "ECFP 6":      "#117733",
     "Coulomb":     "#999933",
     "Coulomb bob": "#DDCC77",
     "NovoMolGen":  "#882255",
