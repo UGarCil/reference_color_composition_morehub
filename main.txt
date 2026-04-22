@@ -1,6 +1,6 @@
 MODEL_COLORS = {
     "SelfiesTED":  "#000000",
-    "CLAMP":       "#F0F0F0",
+    "CLAMP":       "#C8C8C8",
     "GROVER":      "#E69F00",
     "R-MAT":       "#56B4E9",
     "MAT":         "#009E73",
