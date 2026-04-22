@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MoreHub Color Composition</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    :root {
+      --bg: #f3f3f3;
+      --panel: #f5f5f5;
+      --panel-strong: #f9f9f9;
+      --border: #d4d4d4;
+      --text: #1f1f1f;
+      --muted: #676767;
+      --action: #3a3a3a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, #ffffff 0%, transparent 45%),
+        linear-gradient(180deg, #fbfbfb 0%, var(--bg) 100%);
+      min-height: 100vh;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 1.5rem;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .palette-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      padding: 8px 10px;
+      min-height: 78px;
+    }
+
+    .palette-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .swatch {
+      width: 42px;
+      height: 36px;
+      border-radius: 7px;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      flex-shrink: 0;
+    }
+
+    .meta {
+      min-width: 0;
+    }
+
+    .name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hex-button {
+      margin-top: 2px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-family: "Cascadia Code", Consolas, "Courier New", monospace;
+      font-size: 0.9rem;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .hex-button:hover,
+    .hex-button:focus-visible {
+      color: var(--action);
+      text-decoration: underline;
+      outline: none;
+    }
+
+    .copy-button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 8px 10px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .copy-button:hover,
+    .copy-button:focus-visible {
+      background: #e8e8e8;
+      color: var(--action);
+      outline: none;
+    }
+
+    .copy-button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .palette-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .include-check {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      cursor: pointer;
+      accent-color: #2d8a46;
+    }
+
+    .palette-card.inactive {
+      opacity: 0.55;
+    }
+
+    .formats {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .format-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--panel);
+      display: flex;
+      flex-direction: column;
+      min-height: 240px;
+    }
+
+    .format-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 12px;
+      background: var(--panel-strong);
+    }
+
+    .format-title {
+      margin: 0;
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .format-body {
+      margin: 0;
+      padding: 12px;
+      font-family: "Cascadia Code", Consolas, "Courier New", monospace;
+      font-size: 0.84rem;
+      line-height: 1.42;
+      white-space: pre;
+      overflow: auto;
+      flex: 1;
+      background: #fcfcfc;
+    }
+
+    .toast {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      background: #1f1f1f;
+      color: #fff;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 820px) {
+      .palette-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .formats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>MoreHub Color Composition</h1>
+    <p class="subtitle">
+      Toggle each checkmark to include/exclude that color from JSON/Python bulk exports.
+    </p>
+
+    <section id="palette-grid" class="palette-grid" aria-label="Model color palette"></section>
+
+    <section class="formats" aria-label="Bulk copy formats">
+      <article class="format-card">
+        <header class="format-header">
+          <h2 class="format-title">JSON Style</h2>
+          <button id="copy-json" type="button" class="copy-button">Copy</button>
+        </header>
+        <pre id="json-format" class="format-body"></pre>
+      </article>
+
+      <article class="format-card">
+        <header class="format-header">
+          <h2 class="format-title">Python Style</h2>
+          <button id="copy-python" type="button" class="copy-button">Copy</button>
+        </header>
+        <pre id="python-format" class="format-body"></pre>
+      </article>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const modelColors = [
+      { NAME: "SelfiesTED", HEX: "#000000", SELECTED: true },
+      { NAME: "CLAMP", HEX: "#F0F0F0", SELECTED: true },
+      { NAME: "GROVER", HEX: "#E69F00", SELECTED: true },
+      { NAME: "R-MAT", HEX: "#56B4E9", SELECTED: true },
+      { NAME: "MAT", HEX: "#009E73", SELECTED: true },
+      { NAME: "MolBERT", HEX: "#F0E442", SELECTED: true },
+      { NAME: "ChemBERTa", HEX: "#0072B2", SELECTED: true },
+      { NAME: "Graphormer", HEX: "#D55E00", SELECTED: true },
+      { NAME: "ChemGPT", HEX: "#CC79A7", SELECTED: true },
+      { NAME: "MoLFormer", HEX: "#332288", SELECTED: true },
+      { NAME: "MolCLR gin", HEX: "#AA4499", SELECTED: true },
+      { NAME: "MolCLR gcn", HEX: "#44AA99", SELECTED: true },
+      { NAME: "Morgan", HEX: "#117733", SELECTED: true },
+      { NAME: "Coulomb", HEX: "#999933", SELECTED: true },
+      { NAME: "Coulomb bob", HEX: "#DDCC77", SELECTED: true },
+      { NAME: "NovoMolGen", HEX: "#882255", SELECTED: true },
+      { NAME: "Mol2Vec", HEX: "#88CCEE", SELECTED: true },
+      { NAME: "SELFormer", HEX: "#661100", SELECTED: true },
+      { NAME: "ChemFormer", HEX: "#6699CC", SELECTED: true }
+    ];
+
+    const toast = d3.select("#toast");
+
+    const pythonStyle = (palette) => {
+      const lines = palette.map(
+        (row) => `    {"NAME": "${row.NAME}", "HEX": "${row.HEX}"}`
+      );
+      return "[\n" + lines.join(",\n") + "\n]";
+    };
+
+    const selectedPalette = () => modelColors
+      .filter((row) => row.SELECTED)
+      .map(({ NAME, HEX }) => ({ NAME, HEX }));
+
+    const compositionLine = (row) => `${row.NAME}: ${row.HEX}`;
+
+    const showToast = (text) => {
+      toast.text(text).classed("visible", true);
+      window.clearTimeout(showToast.timeoutId);
+      showToast.timeoutId = window.setTimeout(() => {
+        toast.classed("visible", false);
+      }, 1300);
+    };
+
+    const fallbackCopy = (text) => {
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.setAttribute("readonly", "");
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        const result = document.execCommand("copy");
+        textArea.remove();
+        return result;
+      } catch (error) {
+        console.error("Fallback copy failed:", error);
+        return false;
+      }
+    };
+
+    const copyText = async (text) => {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (error) {
+        console.warn("Clipboard API unavailable, using fallback.", error);
+      }
+      return fallbackCopy(text);
+    };
+
+    const paletteGrid = d3.select("#palette-grid");
+    const jsonFormat = d3.select("#json-format");
+    const pythonFormat = d3.select("#python-format");
+    const copyJsonButton = d3.select("#copy-json");
+    const copyPythonButton = d3.select("#copy-python");
+
+    const updateFormats = () => {
+      const palette = selectedPalette();
+      const jsonText = JSON.stringify(palette, null, 2);
+      const pythonText = pythonStyle(palette);
+      const hasSelection = palette.length > 0;
+      jsonFormat.text(jsonText);
+      pythonFormat.text(pythonText);
+      copyJsonButton.property("disabled", !hasSelection);
+      copyPythonButton.property("disabled", !hasSelection);
+      return { jsonText, pythonText, count: palette.length };
+    };
+
+    const cards = paletteGrid
+      .selectAll("article")
+      .data(modelColors)
+      .enter()
+      .append("article")
+      .attr("class", "palette-card")
+      .classed("inactive", (d) => !d.SELECTED);
+
+    const left = cards.append("div").attr("class", "palette-left");
+    left.append("span")
+      .attr("class", "swatch")
+      .style("background-color", (d) => d.HEX);
+
+    const meta = left.append("div").attr("class", "meta");
+    meta.append("div").attr("class", "name").text((d) => d.NAME);
+    meta.append("button")
+      .attr("type", "button")
+      .attr("class", "hex-button")
+      .text((d) => d.HEX)
+      .on("click", async (event, d) => {
+        event.stopPropagation();
+        const copied = await copyText(d.HEX);
+        showToast(copied ? `Copied ${d.HEX}` : "Could not copy");
+      });
+
+    const right = cards.append("div").attr("class", "palette-right");
+
+    right.append("input")
+      .attr("type", "checkbox")
+      .attr("class", "include-check")
+      .attr("aria-label", (d) => `Include ${d.NAME} in bulk exports`)
+      .attr("title", "Include in JSON/Python exports")
+      .property("checked", (d) => d.SELECTED)
+      .on("change", function (event, d) {
+        d.SELECTED = this.checked;
+        d3.select(event.currentTarget.closest(".palette-card"))
+          .classed("inactive", !d.SELECTED);
+        updateFormats();
+      });
+
+    right.append("button")
+      .attr("type", "button")
+      .attr("class", "copy-button")
+      .text("Copy")
+      .on("click", async (_, d) => {
+        const copied = await copyText(compositionLine(d));
+        showToast(copied ? `Copied ${d.NAME}` : "Could not copy");
+      });
+
+    copyJsonButton.on("click", async () => {
+      const { jsonText, count } = updateFormats();
+      if (count === 0) {
+        showToast("No colors selected");
+        return;
+      }
+      const copied = await copyText(jsonText);
+      showToast(copied ? `JSON copied (${count})` : "Could not copy");
+    });
+
+    copyPythonButton.on("click", async () => {
+      const { pythonText, count } = updateFormats();
+      if (count === 0) {
+        showToast("No colors selected");
+        return;
+      }
+      const copied = await copyText(pythonText);
+      showToast(copied ? `Python list copied (${count})` : "Could not copy");
+    });
+
+    updateFormats();
+  </script>
+</body>
+</html>
